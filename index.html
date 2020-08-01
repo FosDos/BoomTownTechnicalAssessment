@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html land="en" >
+  <head>
+    <meta charset="UTF-8">
+    <title>Assessment for BoomTown</title>
+  </head>
+
+  <body>
+    <h1> Foster Williams Assessment for BoomTown</h1>
+    <button id = 'start_button'>Run!</button>
+    <div id ='Results'>
+    <p id="verify">
+    </p>
+    <p id="data">
+    </p>
+
+    </div>
+
+    <script>
+      
+      <!--
+      // Author: Foster C. Williams
+      // This is written as a technical assessment for BoomTown.
+      //
+      // Hello! if you're reading this I hope you enjoy my code!
+      // This was a really neat challenge!
+      // 
+      // Important Note: fetching https://api.github.com/orgs/BoomTownROI/members{/member} and 
+      //   https://api.github.com/orgs/BoomTownROI/public_members{/member} would normally 
+      //   return a 302 "found" and no data. I sanitized the {/member} part out of both to get to the data
+      //   in members and public_members. If this is unwanted remove line 100 in the code below
+      //   which will be marked accordingly. 
+      // 
+      const start_button = document.getElementById("start_button");
+      const verify = document.getElementById("verify");
+      const data = document.getElementById("data");
+      start_button.addEventListener("click", get_data);
+
+      /*
+      / asynchronous function get_data()
+      / 
+      / This function makes requests for data from the github api.
+      / It completes the following tasks on the organization details result object:
+      /   1. Verifies that the updated_at value is greater than the created_at value.
+      /   2. Verifies that the public_repos count is equal to the count of repos found at repos_url.
+      /   3. Makes requests to each appropriate url (containing https://api.github.com/orgs/boomtownroi)
+      /   4. If a 200 status is returned: compiles data from each object and displays IDs and information to help the end user make sense of them.
+      /   5. If an error is returned: makes user aware of that error
+      */
+      async function get_data()
+      {
+        const url = "https://api.github.com/orgs/boomtownroi";
+        const response = await fetch(url);
+        const result = await response.json();
+        
+        var return_data = "";
+        var return_verifications = "";
+       
+        //Veriying creation and updated times.
+        var updated_time = result.updated_at;
+        var created_time = result.created_at;
+
+        var first_date = new Date(created_time.substring(0,4), created_time.substring(5,7),created_time.substring(8,10), created_time.substring(11,13), created_time.substring(14,16),created_time.substring(17,19));
+        var second_date = new Date(updated_time.substring(0,4), updated_time.substring(5,7),updated_time.substring(8,10), updated_time.substring(11,13), updated_time.substring(14,16),updated_time.substring(17,19));
+        
+        if(first_date < second_date)
+        {
+          return_verifications = return_verifications + "Verified that updated_at time is later than created_at time. <br>";
+        }
+        else
+        {
+          return_verifications = return_verifications + "updated_at time is not later than created_at time. <br>";
+        }
+        
+        //Here the JSON is converted to a string and then split to extract the proper URLs.
+        //It would have been possible to pull the URLs directly from the JSON, but this allowed easy iteration through the data
+        var stringified_json = JSON.stringify(result);
+        
+        
+        var split_data = stringified_json.split(",");
+        var index = 0;
+        
+        while (index < split_data.length)
+        {
+          if(split_data[index].includes("https://api.github.com/orgs/BoomTownROI"))
+          {
+       
+            var current_url = (split_data[index].split("\"")[3]);
+            //This is the line of code mentioned in the note above that could be removed if it was not intended for me to account for it.
+            current_url = current_url.split("{")[0];
+            //This line of code is appended to address issues with the github API only returning 30 items by default.
+            current_url = current_url + "?page=1&per_page=100";
+       
+            var current_response = await fetch(current_url);
+            var current_result = await current_response.json();
+            var response_status = current_response.status;
+           
+            if(response_status == 200)
+            {
+              
+              if(current_url == "https://api.github.com/orgs/BoomTownROI?page=1&per_page=100")
+              {
+                return_data = return_data + "BoomTown organizational details object at " + current_url.replace("?page=1&per_page=100","") + " <br>Response code: " + response_status + "<br>ID: " + current_result.id + "<br>";
+              }
+              else if(current_url.includes("repos"))
+              {
+                //Verification of public_repos done here to minimize amount of requests made
+                if(current_result.length == result.public_repos)
+                {
+                  return_verifications = return_verifications + "public_repos count verified with " + current_result.length + " repositories found.";  
+                }
+                else
+                {
+                  return_verifications = return_verifications + "public_repos count NOT verified with " + current_result.length + " repositories found."; 
+                }
+                return_data = return_data + "<br>" + "Repository IDs at " + (current_url.replace("?page=1&per_page=100","") + "<br>Response code: " + response_status) + "<br>";
+                repos_iterator = 0;
+                while (repos_iterator < current_result.length)
+                {
+                  return_data = return_data + ("ID: " + current_result[repos_iterator].id) + "<br>";
+                  repos_iterator = repos_iterator+1;
+                }
+                
+                
+              }
+              else if(current_url.includes("events"))
+              {
+                return_data = return_data + "<br>" + "Event IDs at " + (current_url.replace("?page=1&per_page=100","") + "<br>Response code: " + response_status) + "<br>";
+                events_iterator = 0;
+                while (events_iterator < current_result.length)
+                {
+                  return_data = return_data + ("ID: " + current_result[events_iterator].id)+ "<br>";
+                  events_iterator = events_iterator+1;
+                }
+
+              }
+              else if(current_url.includes("members"))
+              {
+                return_data = return_data + "<br>" + "Member IDs at " + (current_url.replace("?page=1&per_page=100","") + "<br> Response code " + response_status) + "<br>";
+                members_iterator = 0;
+                while (members_iterator < current_result.length)
+                {
+                  return_data = return_data + ("ID: " + current_result[members_iterator].id) + "<br>";
+                  members_iterator = members_iterator+1;
+                }
+              }
+               
+            }
+            else
+            {
+              return_data = return_data + "<br>" + ("Error code " + response_status + " on " + current_url.replace("?page=1&per_page=100","")) + "<br>";
+            }
+          }
+          index = index + 1
+        }
+        verify.innerHTML = return_verifications;
+        data.innerHTML = return_data;
+      }
+     //Hope you liked it! 
+
+    </script> 
+  </body>
+</html>
